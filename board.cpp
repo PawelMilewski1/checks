@@ -7,10 +7,48 @@ board::board() {
 
 }
 
+std::vector<move> legalMoves(bool playerTurn) {
+    if (checkJumps(this->playerTurn).empty()) {
+
+    }
+}
+
+std::vector<move> checkJump(bool playerTurn) {
+    int enemy = 2;
+    bool promote = false;
+    if (!playerTurn) {
+        enemy = 1;
+    }
+    std::vector<move> jumpMoves;
+    for (int i = 0; i < 32; i++) {
+        for (int i2 = 0; i2 < 2; i2++) { 
+            if (boardDiagonals[i][i2] == enemy && boardtwoDiagonals[i][i2] == 0) {
+            if (i2 < 4 || i2 > 27) {
+                promote = true;
+            }
+            moves.emplace_back(this->boardArray[i], boardtwoDiagonals[i][i2], boardDiagonals[i][i2], promote, playerTurn);
+           } 
+        }
+        if (this->boardArray[i] > 2) {
+            for (int i2 = 2; i2 < 4; i2++) {
+                if (boardDiagonals[i][i2] == enemy && boardtwoDiagonals[i][i2] == 0) {
+                if (i2 < 4 || i2 > 27) {
+                    promote = true;
+                }
+                moves.emplace_back(this->boardArray[i], boardtwoDiagonals[i][i2], boardDiagonals[i][i2], promote, playerTurn);
+                } 
+            }
+        }//  move(int positionInput, int destinationInput,int removedPosInput, bool reachedEndInput, bool playerInput) {
+    }
+}
+
 void board::loadBoard(std::vector<int>& loadBoardArray) {
     for (int i = 0; i < 32; i++) {
-        boardArray[i] = loadBoardArray[i];
+        this->boardArray[i] = loadBoardArray[i];
     }
+}
+
+void board::showBoard() {
     int row = 0;
     for (int i = 0; i < sizeof(boardArray) / sizeof(boardArray[0]); i++) {
         if (row%2 == 0) {
@@ -43,17 +81,17 @@ void board::loadGame() {
             }
             lineNumber++;
         }        
-        checkBoard.loadBoard(loadBoardArray);
+        this->loadBoard(loadBoardArray);
         std::getline(inputFile,line);
-        if (line[0] == '1') {
-            // Decide whose turn it is
+        if (line[0] == '2') {
+            this->playerTurn = false; // it's player two turn
         }
 
         std::getline(inputFile,line);
-        // time limit is std::stoi(line[0])
+        this->playerTurn = std::stoi(line[0]);
 
         inputFile.close();
     } else {
-        std::cerr << "Unable to open the file." << std::endl;
+        std::cerr << "Unable to open file" << std::endl;
     }
 }
