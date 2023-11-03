@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.5)
+project(CheckersGame)
+set(CMAKE_C_COMPILER "gcc")
+set(CMAKE_CXX_COMPILER "g++")
+add_executable(CheckersGame main.cpp board.cpp board.h)
