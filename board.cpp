@@ -13,11 +13,16 @@ board::board() {
 }
 std::vector<move> board::alphabeta(board& inputBoard) {
     board alphabetaboard = inputBoard;
-    std::pair<int,std::vector<move>> valuemove = maxValue(alphabetaboard, -INT_MAX, INT_MAX, 0);
+    std::vector<std::vector<move>> checkforonemove = inputBoard.legalMoves(inputBoard);
+    if (checkforonemove.size() == 1) { // if have one move, choose it
+        return checkforonemove[0];
+    }
+    std::pair<int,std::vector<move>> valuemove = maxValue(alphabetaboard, true, -INT_MAX, INT_MAX, 0);
     return valuemove.second;
 }
         
-std::pair<int,std::vector<move>> board::maxValue(board& inputBoard, int alpha, int beta, int currentDepth) {
+std::pair<int,std::vector<move>> board::maxValue(board& inputBoard, bool playerTurn, int alpha, int beta, int currentDepth) {
+    inputBoard.playerTurn = false;
     int gameisTerminal = inputBoard.gameisTerminal(inputBoard);
     std::vector<move> moves;
     if (gameisTerminal != 0) { // THEN GAME IS TERMINAL
@@ -26,22 +31,16 @@ std::pair<int,std::vector<move>> board::maxValue(board& inputBoard, int alpha, i
     if (currentDepth == inputBoard.maxDepth) {
         return std::make_pair(inputBoard.eval(inputBoard), moves);
     }
-    int v = -INT_MAX;
-    std::vector<move> legalmoves = inputBoard.legalMoves(inputBoard);
-    std::vector<move> moveset;
+    int v = INT_MIN;
+    std::vector<std::vector<move>> legalmoves = inputBoard.legalMoves(inputBoard);
     for (int i = 0; i < legalmoves.size(); i++) {
         board searchboard = inputBoard;
-        
-        while (legalmoves[i].jumpnumber != 0) {
-            moveset.push_back(legalmoves[i]);
-            i++;
-        }
 
-        searchboard.applyChoice(moveset, searchboard);
-        std::pair<int,std::vector<move>> minvaluemove = minValue(searchboard, alpha, beta, currentDepth+1);
+        searchboard.applyChoice(legalmoves[i], searchboard);
+        std::pair<int,std::vector<move>> minvaluemove = minValue(searchboard, playerTurn, alpha, beta, currentDepth+1);
         if (minvaluemove.first > v) {
             v = minvaluemove.first;
-            moves = moveset;
+            moves = legalmoves[i];
             alpha = std::max(alpha,v);
         }
         if (v >= beta) {
@@ -51,35 +50,30 @@ std::pair<int,std::vector<move>> board::maxValue(board& inputBoard, int alpha, i
     return std::make_pair(v,moves);
 }
         
-std::pair<int,std::vector<move>> board::minValue(board& inputBoard, int alpha, int beta, int currentDepth) {
+std::pair<int,std::vector<move>> board::minValue(board& inputBoard, bool playerTurn, int alpha, int beta, int currentDepth) {
+    inputBoard.playerTurn = true;
     int gameisTerminal = inputBoard.gameisTerminal(inputBoard);
     std::vector<move> moves;
     if (gameisTerminal != 0) { // THEN GAME IS TERMINAL
         return std::make_pair(gameisTerminal, moves); // return utility and null
     }
     if (currentDepth == inputBoard.maxDepth) {
-        return std::make_pair(inputBoard.eval(inputBoard), moves);
+        return std::make_pair(-inputBoard.eval(inputBoard), moves);
     }
     int v = INT_MAX;
-    std::vector<move> legalmoves = inputBoard.legalMoves(inputBoard);
-    std::vector<move> moveset;
+    std::vector<std::vector<move>> legalmoves = inputBoard.legalMoves(inputBoard);
     for (int i = 0; i < legalmoves.size(); i++) {
         board searchboard = inputBoard;
-         
-        while (legalmoves[i].jumpnumber != 0) {
-            moveset.push_back(legalmoves[i]);
-            i++;
-        }
 
-        searchboard.applyChoice(moveset, searchboard);
-        std::pair<int,std::vector<move>> maxvaluemove = maxValue(searchboard, alpha, beta, currentDepth+1);
+        searchboard.applyChoice(legalmoves[i], searchboard);
+        std::pair<int,std::vector<move>> maxvaluemove = maxValue(searchboard, playerTurn, alpha, beta, currentDepth+1);
         if (maxvaluemove.first < v) {
             v = maxvaluemove.first;
-            moves = moveset;
+            moves = legalmoves[i];
             beta = std::min(beta,v);
         }
         if (v <= alpha) {
-            return std::make_pair(v, moves);
+            return std::make_pair(v, legalmoves[i]);
         }
     }
     return std::make_pair(v,moves);
@@ -108,35 +102,83 @@ int board::eval(board& inputBoard) {
 }
 
 int board::gameisTerminal(board& inputBoard) {
-    if (inputBoard.playerTurn) {
-        std::vector<move> legalmovesPlayer1 = legalMoves(inputBoard);
-        if (legalmovesPlayer1.empty()) {
-            return INT_MAX; // PLAYER 2 WINS
-        }
-    } else {
-        std::vector<move> legalmovesPlayer2 = legalMoves(inputBoard);
-        if (legalmovesPlayer2.empty()) {
-            return -INT_MAX; // PLAYER 1 WINS
-        }
+    board termgame = inputBoard;
+    std::vector<std::vector<move>> legalmovesPlayer1 = legalMoves(termgame);
+    bool playerTurn = termgame.playerTurn;
+    termgame.playerTurn = playerTurn;
+    std::vector<std::vector<move>> legalmovesPlayer2 = legalMoves(termgame);
+    if (legalmovesPlayer1.empty()) {
+        return INT_MIN;
+    } 
+    if (legalmovesPlayer2.empty()) {
+        return INT_MAX;
     }
-    return 0; // GAME IS NOT TERMINAL
+    return 0; 
 }
 
-std::vector<move> board::legalMoves(board& inputBoard) {
-    std::vector<move> legalmoves;
-    legalmoves = checkJump(inputBoard, -1, 0);
-    if (legalmoves.empty()) { // then there are no jumps available
-        legalmoves = checkRegular(inputBoard);
+std::vector<std::vector<move>> board::legalMoves(board& inputBoard) {
+    std::vector<std::vector<move>> legalmoves;
+    std::vector<move> moveset;
+    std::vector<move> jumpmoves;
+    std::vector<move> regmoves;
+    move firstmove;
+    jumpmoves = checkJump(inputBoard, -1, 0);
+    if (jumpmoves.empty()) { // then there are no jumps available
+        regmoves = checkRegular(inputBoard);
+        for (int i = 0; i < regmoves.size(); i++) {
+            moveset.emplace_back(regmoves[i]);
+            legalmoves.emplace_back(moveset);
+            moveset.clear();
+        }
+        return legalmoves;
+    }
+    if (jumpmoves.size() > 1) {
+        firstmove = jumpmoves[0];
+        moveset.emplace_back(firstmove);
+        for (int i = 1; i < jumpmoves.size(); i++) {
+            if (jumpmoves[i].jumpnumber == 0) {
+                legalmoves.emplace_back(moveset);
+                moveset.clear();
+                firstmove = jumpmoves[i];
+                moveset.emplace_back(firstmove);
+            } else if(jumpmoves[i].jumpnumber > jumpmoves[i-1].jumpnumber) {
+                moveset.emplace_back(jumpmoves[i]);
+            } else if (jumpmoves[i].jumpnumber == jumpmoves[i-1].jumpnumber) {
+                legalmoves.emplace_back(moveset);
+                moveset.pop_back();
+                moveset.emplace_back(jumpmoves[i]);
+            } else if (jumpmoves[i].jumpnumber < jumpmoves[i-1].jumpnumber) {
+                legalmoves.emplace_back(moveset);
+                int numberofpops = jumpmoves[i-1].jumpnumber - jumpmoves[i].jumpnumber;
+                for (int i = 0; i < numberofpops + 1; i++) {
+                    moveset.pop_back();
+                }
+                moveset.emplace_back(jumpmoves[i]);
+            } else {
+                legalmoves.emplace_back(moveset);
+                moveset.clear();
+                moveset.emplace_back(firstmove);
+                moveset.emplace_back(jumpmoves[i]);
+            }
+        }
+        if (!moveset.empty()) {
+            legalmoves.emplace_back(moveset);
+        }
+    }
+    if (jumpmoves.size() == 1) {
+        firstmove = jumpmoves[0];
+        moveset.emplace_back(firstmove);
+        legalmoves.emplace_back(moveset);
     }
     return legalmoves;
 }
 
-void board::applyChoice(std::vector<move> legalmoves, board& inputBoard) {
-    if (!legalmoves[0].jump) {
-        movePiece(legalmoves[0], inputBoard);
+void board::applyChoice(std::vector<move> moveset, board& inputBoard) {
+    if (moveset[0].jumpnumber == -1) {
+        movePiece(moveset[0], inputBoard);
     } else {
-        for (int i = 0; i < legalmoves.size(); i++) {
-            movePiece(legalmoves[i], inputBoard);
+        for (int i = 0; i < moveset.size(); i++) {
+            movePiece(moveset[i], inputBoard);
         }
     }
 }
@@ -236,10 +278,11 @@ std::vector<move> board::checkJump(board& inputBoard, int position, int jumpnumb
                         jumpmoves.emplace_back(currentmove);
                         returnedjumpmoves = jumpboard.checkJump(jumpboard, currentmove.destination, jumpnumber+1);
                         if (!returnedjumpmoves.empty()) {
-                            for (int i = 0; i < returnedjumpmoves.size(); ++i) {
+                            for (int i = 0; i < returnedjumpmoves.size(); i++) {
                                 jumpmoves.push_back(returnedjumpmoves[i]);
                             }
                         }
+                        jumpboard = inputBoard;
                     }
                 }
             }
@@ -263,10 +306,11 @@ std::vector<move> board::checkJump(board& inputBoard, int position, int jumpnumb
                         jumpmoves.emplace_back(currentmove);
                         returnedjumpmoves = jumpboard.checkJump(jumpboard, currentmove.destination, jumpnumber+1);
                         if (!returnedjumpmoves.empty()) {
-                            for (int i = 0; i < returnedjumpmoves.size(); ++i) {
+                            for (int i = 0; i < returnedjumpmoves.size(); i++) {
                                 jumpmoves.push_back(returnedjumpmoves[i]);
                             }
                         }
+                        jumpboard = inputBoard;
                     }
                 }
             }
@@ -293,7 +337,7 @@ std::vector<move> board::checkJump(board& inputBoard, int position, int jumpnumb
                             jumpmoves.emplace_back(currentmove);
                             returnedjumpmoves = jumpboard.checkJump(jumpboard, currentmove.destination, jumpnumber+1);
                             if (!returnedjumpmoves.empty()) {
-                                for (int i = 0; i < returnedjumpmoves.size(); ++i) {
+                                for (int i = 0; i < returnedjumpmoves.size(); i++) {
                                     jumpmoves.push_back(returnedjumpmoves[i]);
                                 }
                             }
@@ -322,7 +366,7 @@ std::vector<move> board::checkJump(board& inputBoard, int position, int jumpnumb
                             jumpmoves.emplace_back(currentmove);
                             returnedjumpmoves = jumpboard.checkJump(jumpboard, currentmove.destination, jumpnumber+1);
                             if (!returnedjumpmoves.empty()) {
-                                for (int i = 0; i < returnedjumpmoves.size(); ++i) {
+                                for (int i = 0; i < returnedjumpmoves.size(); i++) {
                                     jumpmoves.push_back(returnedjumpmoves[i]);
                                 }
                             }
@@ -343,16 +387,45 @@ void board::loadBoard(std::vector<int>& loadBoardArray, board& inputBoard) {
 }
 
 void board::showBoard(board& inputBoard) {
-    int row = 0;
-    for (int i = 0; i < sizeof(boardArray) / sizeof(boardArray[0]); i++) {
-        if (row%2 == 0) {
-            std::cout << "  " << boardArray[i];
-        } else {
-            std::cout << boardArray[i] << "  ";
+    std::cout << std::endl << "+----+----+----+----+----+----+----+----+" << std::endl;
+
+    for (int i = 0; i < sizeof(inputBoard.boardArray) / sizeof(inputBoard.boardArray[0]); i++) {
+    std::string piece;
+
+    switch (inputBoard.boardArray[i]) {
+            case 0: // Empty
+                piece = "  ";
+                break;
+            case 1: // Black Pawn
+                piece = "B ";
+                break;
+            case 2: // Red Pawn
+                piece = "R ";
+                break;
+            case 3: // Black King
+                piece = "BK";
+                break;
+            case 4: // Red King
+                piece = "RK";
+                break;
+            default: // Error
+                piece = " ?";
+                break;
         }
-        if ((i+1)%4 == 0) {
-            std::cout << std::endl;
-            row++;
+
+        int row = i / 4;
+        bool skipFirst = row % 2 == 0;
+        bool lastCell = (i + 1) % 4 == 0;
+
+        if (skipFirst) {
+            std::cout << "|    |" << " " + piece + " ";
+        } else {
+            std::cout << "| " + piece + " |" << "    ";
+        }
+
+        if (lastCell) {
+        std::cout << "|";
+            std::cout << std::endl << "+----+----+----+----+----+----+----+----+" << std::endl;
         }
     }
 }
