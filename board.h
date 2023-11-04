@@ -1,4 +1,5 @@
 #include <vector>
+#include <ctime>
 #include "move.h"
 
 #ifndef CHECK_BOARD_H
