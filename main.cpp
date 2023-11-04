@@ -87,11 +87,12 @@ int main() {
                 }
             }
             std::clock_t startTime = std::clock();
-            std::vector<move> computermove = checkBoard.alphabeta(checkBoard);
+            checkBoard.timestart = startTime;
+            std::vector<move> computermove = checkBoard.iterativeDeepening(checkBoard);
             std::clock_t endTime = std::clock();
             double totalcomputertime = static_cast<double>(endTime - startTime) / CLOCKS_PER_SEC;
             std::cout << "Clock time: " << totalcomputertime << std::endl;
-            std::cout << "COMPUTER CHOSEN: " << computermove[0].position << " TO " << computermove[1].destination << std::endl;
+            std::cout << "COMPUTER CHOSEN: " << computermove[0].position << " TO " << computermove[0].destination << ", " << std::endl;
             checkBoard.applyChoice(computermove, checkBoard);
             std::cout << "COMPUTER MOVE APPLIED: SEE BOARD BELOW" << std::endl;
             checkBoard.playerTurn = true;

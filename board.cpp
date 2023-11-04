@@ -3,6 +3,8 @@
 #include <vector>
 #include <climits>
 #include <random>
+#include <ctime>
+#include <unordered_map>
 #include "board.h"
 #include "move.h"
 
@@ -12,24 +14,70 @@ int boardtwoDiagonals[32][4] = {{-1,-1,-1,9},{-1,-1,8,10},{-1,-1,9,11},{-1,-1,10
 board::board() {
 
 }
-std::vector<move> board::alphabeta(board& inputBoard) {
+std::vector<move> board::iterativeDeepening(board& inputBoard) {
+    std::vector<move> bestMove;
+    std::unordered_map<std::string, std::pair<int, std::vector<move>>> transpositionTable;
+
+    for (int depth = 2; depth <= inputBoard.maxDepth && (static_cast<double>(std::clock() - inputBoard.timestart) / CLOCKS_PER_SEC < inputBoard.time / 4); depth+=2) {
+        inputBoard.currentdepth = depth;
+        std::cout << "DEPTH: " << inputBoard.currentdepth << std::endl;
+        std::cout << static_cast<double>(std::clock() - inputBoard.timestart) / CLOCKS_PER_SEC << std::endl;
+        bestMove = alphabeta(inputBoard, -INT_MAX, INT_MAX, 0, transpositionTable);
+    }
+    return bestMove;
+}
+
+std::string board::generateHash(const board& inputBoard) {    
+    std::string hash;
+
+    for (int i = 0; i < 32; i++) {
+        hash += std::to_string(inputBoard.boardArray[i]);
+        if (i < 32 - 1) {
+            hash += '|';
+        }
+    }
+
+    hash += '|' + (inputBoard.playerTurn ? "1" : "0");
+    hash += '|' + std::to_string(inputBoard.currentdepth);
+
+    return hash;
+}
+
+std::vector<move> board::alphabeta(board& inputBoard, int alpha, int beta, int currentDepth, std::unordered_map<std::string, std::pair<int, std::vector<move>>>& transpositionTable) {
+
+    if (currentDepth == 0) {
+        std::string boardHash = generateHash(inputBoard);
+        if (transpositionTable.find(boardHash) != transpositionTable.end()) {
+            return transpositionTable[boardHash].second;
+        }
+    }
+
     board alphabetaboard = inputBoard;
     std::vector<std::vector<move>> checkforonemove = inputBoard.legalMoves(inputBoard);
     if (checkforonemove.size() == 1) { // if have one move, choose it
         return checkforonemove[0];
     }
-    std::pair<int,std::vector<move>> valuemove = maxValue(alphabetaboard, true, -INT_MAX, INT_MAX, 0);
+
+    std::pair<int,std::vector<move>> valuemove = maxValue(alphabetaboard, true, -INT_MAX, INT_MAX, currentDepth, transpositionTable);
+
     return valuemove.second;
 }
         
-std::pair<int,std::vector<move>> board::maxValue(board& inputBoard, bool playerTurn, int alpha, int beta, int currentDepth) {
+std::pair<int,std::vector<move>> board::maxValue(board& inputBoard, bool playerTurn, int alpha, int beta, int currentDepth, std::unordered_map<std::string, std::pair<int, std::vector<move>>>& transpositionTable) {
     inputBoard.playerTurn = false;
+
+    std::string boardHash = generateHash(inputBoard);
+
+    if (transpositionTable.find(boardHash) != transpositionTable.end() && transpositionTable[boardHash].first >= beta) {
+        return transpositionTable[boardHash];
+    }
+
     int gameisTerminal = inputBoard.gameisTerminal(inputBoard);
     std::vector<move> moves;
     if (gameisTerminal != 0) { // THEN GAME IS TERMINAL
         return std::make_pair(gameisTerminal, moves); // return utility and null
     }
-    if (currentDepth == inputBoard.maxDepth) {
+    if (currentDepth == inputBoard.currentdepth) {
         return std::make_pair(inputBoard.eval(inputBoard) + 1, moves);
     }
     int v = INT_MIN;
@@ -38,27 +86,36 @@ std::pair<int,std::vector<move>> board::maxValue(board& inputBoard, bool playerT
         board searchboard = inputBoard;
 
         searchboard.applyChoice(legalmoves[i], searchboard);
-        std::pair<int,std::vector<move>> minvaluemove = minValue(searchboard, playerTurn, alpha, beta, currentDepth+1);
+        std::pair<int,std::vector<move>> minvaluemove = minValue(searchboard, playerTurn, alpha, beta, currentDepth+1, transpositionTable);
         if (minvaluemove.first > v) {
             v = minvaluemove.first;
             moves = legalmoves[i];
             alpha = std::max(alpha,v);
         }
         if (v >= beta) {
+            transpositionTable[boardHash] = std::make_pair(v, moves);
             return std::make_pair(v, moves);
         }
     }
+    transpositionTable[boardHash] = std::make_pair(v, moves);
     return std::make_pair(v,moves);
 }
         
-std::pair<int,std::vector<move>> board::minValue(board& inputBoard, bool playerTurn, int alpha, int beta, int currentDepth) {
+std::pair<int,std::vector<move>> board::minValue(board& inputBoard, bool playerTurn, int alpha, int beta, int currentDepth, std::unordered_map<std::string, std::pair<int, std::vector<move>>>& transpositionTable) {
     inputBoard.playerTurn = true;
+    
+    std::string boardHash = generateHash(inputBoard);
+
+    if (transpositionTable.find(boardHash) != transpositionTable.end() && transpositionTable[boardHash].first <= alpha) {
+        return transpositionTable[boardHash];
+    }
+
     int gameisTerminal = inputBoard.gameisTerminal(inputBoard);
     std::vector<move> moves;
     if (gameisTerminal != 0) { // THEN GAME IS TERMINAL
         return std::make_pair(gameisTerminal, moves); // return utility and null
     }
-    if (currentDepth == inputBoard.maxDepth) {
+    if (currentDepth == inputBoard.currentdepth) {
         return std::make_pair(-inputBoard.eval(inputBoard) - 1, moves);
     }
     int v = INT_MAX;
@@ -67,16 +124,18 @@ std::pair<int,std::vector<move>> board::minValue(board& inputBoard, bool playerT
         board searchboard = inputBoard;
 
         searchboard.applyChoice(legalmoves[i], searchboard);
-        std::pair<int,std::vector<move>> maxvaluemove = maxValue(searchboard, playerTurn, alpha, beta, currentDepth+1);
+        std::pair<int,std::vector<move>> maxvaluemove = maxValue(searchboard, playerTurn, alpha, beta, currentDepth+1, transpositionTable);
         if (maxvaluemove.first < v) {
             v = maxvaluemove.first;
             moves = legalmoves[i];
             beta = std::min(beta,v);
         }
         if (v <= alpha) {
+            transpositionTable[boardHash] = std::make_pair(v, moves);
             return std::make_pair(v, legalmoves[i]);
         }
     }
+    transpositionTable[boardHash] = std::make_pair(v, moves);
     return std::make_pair(v,moves);
 }
 
@@ -390,7 +449,7 @@ std::vector<move> board::checkJump(board& inputBoard, int position, int jumpnumb
                     }
                 }
             }
-        }//  move(int positionInput, int destinationInput,int removedPosInput, bool reachedEndInput, bool playerInput) {
+        }
     }
     return jumpmoves;
 }
