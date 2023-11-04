@@ -25,7 +25,6 @@ int main() {
                 std::cout << "Player 1 lost, no moves" << std::endl;
                 break;
             }
-            std::cout << legalmoves[0][0].position << " " << legalmoves[0][0].destination << legalmoves[0][0].jumpnumber << std::endl;
             if (legalmoves[0][0].firstjump) {
                 std::cout << "Player 1 must make a jump move" << std::endl;
                 for (int i = 0; i < legalmoves.size(); i++) {
@@ -61,7 +60,7 @@ int main() {
                 }
             }
             checkBoard.applyChoice(legalmoves[choice-1], checkBoard);
-            checkBoard.showBoard(checkBoard);
+            std::cout << "PLAYER MOVE APPLIED: SEE BOARD BELOW" << std::endl;
             checkBoard.playerTurn = false;
         } else { // player 2 turn which is computer
             std::cout << "Computer turn: " << std::endl;
@@ -70,7 +69,6 @@ int main() {
                 std::cout << "Computer lost, no moves" << std::endl;
                 break;
             }
-            std::cout << legalmoves[0][0].position << " " << legalmoves[0][0].destination << legalmoves[0][0].jumpnumber << std::endl;
             if (legalmoves[0][0].firstjump) {
                 std::cout << "Computer must make a jump move" << std::endl;
                 for (int i = 0; i < legalmoves.size(); i++) {
@@ -93,12 +91,9 @@ int main() {
             std::clock_t endTime = std::clock();
             double totalcomputertime = static_cast<double>(endTime - startTime) / CLOCKS_PER_SEC;
             std::cout << "Clock time: " << totalcomputertime << std::endl;
-            std::cout << " YO1 " << std::endl;
-            std::cout << "EMPTY: " << computermove.empty() << std::endl;
-            std::cout << "CHOSEN: " << computermove[0].position << " TO " << computermove[1].destination << std::endl;
+            std::cout << "COMPUTER CHOSEN: " << computermove[0].position << " TO " << computermove[1].destination << std::endl;
             checkBoard.applyChoice(computermove, checkBoard);
-            std::cout << " YO2 " << std::endl;
-            checkBoard.showBoard(checkBoard);
+            std::cout << "COMPUTER MOVE APPLIED: SEE BOARD BELOW" << std::endl;
             checkBoard.playerTurn = true;
         }
     }
