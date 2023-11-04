@@ -19,12 +19,12 @@ std::vector<move> board::alphabeta(board& inputBoard) {
         
 std::pair<int,std::vector<move>> board::maxValue(board& inputBoard, int alpha, int beta, int currentDepth) {
     int gameisTerminal = inputBoard.gameisTerminal(inputBoard);
-    std::vector<move> move;
+    std::vector<move> moves;
     if (gameisTerminal != 0) { // THEN GAME IS TERMINAL
-        return std::make_pair(gameisTerminal, move); // return utility and null
+        return std::make_pair(gameisTerminal, moves); // return utility and null
     }
     if (currentDepth == inputBoard.maxDepth) {
-        return std::make_pair(inputBoard.eval(inputBoard), move);
+        return std::make_pair(inputBoard.eval(inputBoard), moves);
     }
     int v = -INT_MAX;
     std::vector<move> legalmoves = inputBoard.legalMoves(inputBoard);
@@ -33,7 +33,7 @@ std::pair<int,std::vector<move>> board::maxValue(board& inputBoard, int alpha, i
         board searchboard = inputBoard;
         
         while (legalmoves[i].jumpnumber != 0) {
-            moveset.pushback(legalmoves[i]);
+            moveset.push_back(legalmoves[i]);
             i++;
         }
 
@@ -41,24 +41,24 @@ std::pair<int,std::vector<move>> board::maxValue(board& inputBoard, int alpha, i
         std::pair<int,std::vector<move>> minvaluemove = minValue(searchboard, alpha, beta, currentDepth+1);
         if (minvaluemove.first > v) {
             v = minvaluemove.first;
-            move = moveset;
+            moves = moveset;
             alpha = std::max(alpha,v);
         }
         if (v >= beta) {
-            return std::make_pair(v, move);
+            return std::make_pair(v, moves);
         }
     }
-    return std::make_pair(v,move);
+    return std::make_pair(v,moves);
 }
         
 std::pair<int,std::vector<move>> board::minValue(board& inputBoard, int alpha, int beta, int currentDepth) {
     int gameisTerminal = inputBoard.gameisTerminal(inputBoard);
-    std::vector<move> move;
+    std::vector<move> moves;
     if (gameisTerminal != 0) { // THEN GAME IS TERMINAL
-        return std::make_pair(gameisTerminal, move); // return utility and null
+        return std::make_pair(gameisTerminal, moves); // return utility and null
     }
     if (currentDepth == inputBoard.maxDepth) {
-        return std::make_pair(inputBoard.eval(inputBoard), move);
+        return std::make_pair(inputBoard.eval(inputBoard), moves);
     }
     int v = INT_MAX;
     std::vector<move> legalmoves = inputBoard.legalMoves(inputBoard);
@@ -67,7 +67,7 @@ std::pair<int,std::vector<move>> board::minValue(board& inputBoard, int alpha, i
         board searchboard = inputBoard;
          
         while (legalmoves[i].jumpnumber != 0) {
-            moveset.pushback(legalmoves[i]);
+            moveset.push_back(legalmoves[i]);
             i++;
         }
 
@@ -75,14 +75,14 @@ std::pair<int,std::vector<move>> board::minValue(board& inputBoard, int alpha, i
         std::pair<int,std::vector<move>> maxvaluemove = maxValue(searchboard, alpha, beta, currentDepth+1);
         if (maxvaluemove.first < v) {
             v = maxvaluemove.first;
-            move = moveset;
+            moves = moveset;
             beta = std::min(beta,v);
         }
         if (v <= alpha) {
-            return std::make_pair(v, move);
+            return std::make_pair(v, moves);
         }
     }
-    return std::make_pair(v,move);
+    return std::make_pair(v,moves);
 }
 
 int board::eval(board& inputBoard) {

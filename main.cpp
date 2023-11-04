@@ -67,7 +67,7 @@ int main() {
                 }
             }
             int start = 0;
-            int counter = 0;
+            int counter = 1;
             while (counter < choice) {
                 if (legalmoves[start].jumpnumber == 0) {
                     counter++;
@@ -88,7 +88,7 @@ int main() {
             std::cout << "Computer turn: " << std::endl;
             std::vector<move> computermove = checkBoard.alphabeta(checkBoard);
             std::clock_t endTime = std::clock();
-            double totalcomputertime = startTime - endTime;
+            double totalcomputertime = endTime - startTime;
             std::cout << "Clock time: " << totalcomputertime << std::endl;
 
             checkBoard.applyChoice(computermove, checkBoard);
