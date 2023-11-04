@@ -2,6 +2,7 @@
 #include <fstream>
 #include <vector>
 #include <climits>
+#include <random>
 #include "board.h"
 #include "move.h"
 
@@ -14,6 +15,23 @@ board::board() {
 std::vector<move> board::alphabeta(board& inputBoard) {
     board alphabetaboard = inputBoard;
     std::vector<std::vector<move>> checkforonemove = inputBoard.legalMoves(inputBoard);
+    if (checkforonemove[0][0].firstjump) {
+                std::cout << "Computer CHECK MOVE must make a jump move" << std::endl;
+                for (int i = 0; i < checkforonemove.size(); i++) {
+                    std::cout << "CHOICE " << i + 1 << ": ";
+                    for (int i2 = 0; i2 < checkforonemove[i].size(); i2++) {
+                        std::cout << checkforonemove[i][i2].position << " TO " << checkforonemove[i][i2].destination << " w" << checkforonemove[i][i2].jumpnumber << ", ";
+                    }
+                    std::cout << std::endl;
+                }
+            } else {
+                std::cout << "Computer CHECK MOVE must make regular move" << std::endl;
+                for (int i = 0; i < checkforonemove.size(); i++) {
+                    std::cout << "CHOICE " << i+1 << ": ";
+                    std::cout << checkforonemove[i][0].position << " TO " << checkforonemove[i][0].destination;
+                    std::cout << std::endl;
+                }
+            }
     if (checkforonemove.size() == 1) { // if have one move, choose it
         return checkforonemove[0];
     }
@@ -29,7 +47,7 @@ std::pair<int,std::vector<move>> board::maxValue(board& inputBoard, bool playerT
         return std::make_pair(gameisTerminal, moves); // return utility and null
     }
     if (currentDepth == inputBoard.maxDepth) {
-        return std::make_pair(inputBoard.eval(inputBoard), moves);
+        return std::make_pair(inputBoard.eval(inputBoard) + 1, moves);
     }
     int v = INT_MIN;
     std::vector<std::vector<move>> legalmoves = inputBoard.legalMoves(inputBoard);
@@ -47,6 +65,7 @@ std::pair<int,std::vector<move>> board::maxValue(board& inputBoard, bool playerT
             return std::make_pair(v, moves);
         }
     }
+    std::cout << "ALPHA: " << alpha << "BETA: " << beta << std::endl;
     return std::make_pair(v,moves);
 }
         
@@ -58,7 +77,7 @@ std::pair<int,std::vector<move>> board::minValue(board& inputBoard, bool playerT
         return std::make_pair(gameisTerminal, moves); // return utility and null
     }
     if (currentDepth == inputBoard.maxDepth) {
-        return std::make_pair(-inputBoard.eval(inputBoard), moves);
+        return std::make_pair(-inputBoard.eval(inputBoard) - 1, moves);
     }
     int v = INT_MAX;
     std::vector<std::vector<move>> legalmoves = inputBoard.legalMoves(inputBoard);
@@ -97,23 +116,41 @@ int board::eval(board& inputBoard) {
             kingCount++;
         }
     }
-    eval = manCount + kingCount * 2;
+    eval = manCount + kingCount * 5/3;
     return eval;
 }
 
 int board::gameisTerminal(board& inputBoard) {
     board termgame = inputBoard;
-    std::vector<std::vector<move>> legalmovesPlayer1 = legalMoves(termgame);
-    bool playerTurn = termgame.playerTurn;
-    termgame.playerTurn = playerTurn;
-    std::vector<std::vector<move>> legalmovesPlayer2 = legalMoves(termgame);
-    if (legalmovesPlayer1.empty()) {
-        return INT_MIN;
-    } 
-    if (legalmovesPlayer2.empty()) {
-        return INT_MAX;
+    if (termgame.playerTurn) {
+        std::vector<std::vector<move>> legalmovesPlayer1 = legalMoves(termgame);
+        bool playerTurn = termgame.playerTurn;
+        termgame.playerTurn = !playerTurn;
+        std::vector<std::vector<move>> legalmovesPlayer2 = legalMoves(termgame);
+        if (legalmovesPlayer1.empty()) { // user loses
+            std::cout << "USER LOSES 1" << std::endl;
+            return 999999;
+        } 
+        if (legalmovesPlayer2.empty()) { // computer loses            
+            std::cout << "COMPUTER LOSES 1" << std::endl;
+            return -999999;
+        }
+        return 0; 
+    } else {
+        std::vector<std::vector<move>> legalmovesPlayer2 = legalMoves(termgame);
+        bool playerTurn = termgame.playerTurn;
+        termgame.playerTurn = !playerTurn;
+        std::vector<std::vector<move>> legalmovesPlayer1 = legalMoves(termgame);
+        if (legalmovesPlayer1.empty()) { // compter loses
+            std::cout << "COMPUTER LOSES 2" << std::endl;
+            return 999999;
+        } 
+        if (legalmovesPlayer2.empty()) { //user loses
+            std::cout << "USER LOSES 2" << std::endl;
+            return -999999;
+        }
+        return 0;
     }
-    return 0; 
 }
 
 std::vector<std::vector<move>> board::legalMoves(board& inputBoard) {
