@@ -1,10 +1,9 @@
 #include <iostream>
 #include <ctime>
 #include <vector>
+#include <limits>
 #include "board.h"
-
-int boardDiagonals[32][4] = {{-1,-1,4,5},{-1,-1,5,6},{-1,-1,6,7},{-1,-1,7,-1},{-1,0,-1,8},{0,1,8,9},{1,2,9,10},{2,3,10,11},{4,5,12,13},{5,6,13,14},{6,7,14,15},{7,-1,15,-1},{-1,8,-1,16},{8,9,16,17},{9,10,17,18},{10,11,18,19},{12,13,20,21},{13,14,21,22},{14,15,22,23},{15,-1,23,-1},{-1,16,-1,24},{16,17,24,25},{17,18,25,26},{18,19,26,27},{20,21,28,29},{21,22,29,30},{22,23,30,31},{23,-1,31,-1},{-1,24,-1,-1},{24,25,-1,-1},{25,26,-1,-1},{26,27,-1,-1}};
-int boardtwoDiagonals[32][4] = {{-1,-1,-1,9},{-1,-1,8,10},{-1,-1,9,11},{-1,-1,10,-1},{-1,-1,-1,13},{-1,-1,12,14},{-1,-1,13,15},{-1,-1,14,-1},{-1,1,-1,17},{0,2,16,18},{1,3,17,19},{2,-1,18,-1},{-1,5,-1,21},{4,6,20,22},{5,7,21,23},{6,-1,22,-1},{-1,9,-1,25},{8,10,24,26},{9,11,25,27},{10,-1,26,-1},{-1,13,-1,29},{12,14,28,30},{13,15,29,31},{14,-1,30,-1},{-1,17,-1,-1},{16,18,-1,-1},{17,19,-1,-1},{18,-1,-1,-1},{-1,21,-1,-1},{20,22,-1,-1},{21,23,-1,-1},{22,-1,-1,-1}};
+#include "move.h"
 
 int main() {
     board checkBoard = board();
@@ -12,19 +11,89 @@ int main() {
     std::string loadYN;
     std::cin >> loadYN;
     if (loadYN == "y" || loadYN == "Y") {
-        checkBoard.loadGame();
+        checkBoard.loadGame(checkBoard);
     }
-    bool run = true;
-    while (run) {
-        checkBoard.showBoard();
+    std::vector<move> legalmoves;
+    int choice;
+    std::vector<move> chosenmove;
+    while (true) {
+        checkBoard.showBoard(checkBoard);
         if (checkBoard.playerTurn == true) { //player 1 turn which is user
-            
-
-            std::clock_t startTime = std::clock();
-            std::cout << "Computer turn" << std::endl;
-
+            std::cout << "Player 1 turn:" << std::endl;
+            legalmoves = checkBoard.legalMoves(checkBoard);
+            if (legalmoves.empty()) {
+                std::cout << "Player 1 lost, no moves" << std::endl;
+                break;
+            }
+            if (legalmoves[0].firstjump) {
+                std::cout << "Player 1 must make a jump move" << std::endl;
+                for (int i = 0, index = 0; i < legalmoves.size(); i++) {
+                    if (legalmoves[i].jumpnumber == 0) {
+                        std::cout << std::endl;
+                        index++;
+                        std::cout << "CHOICE " << index << ": ";
+                    }
+                    std::cout << legalmoves[i].position << " TO " << legalmoves[i].destination;
+                    if (legalmoves[i+1].jumpnumber == 0 || i+1 == legalmoves.size()) {
+                    } else {
+                        std::cout << " THEN ";
+                    }
+                }
+                std::cout << std::endl;
+            } else {
+                std::cout << "Player 1 must make regular move" << std::endl;
+                for (int i = 0; i < legalmoves.size(); i++) {
+                    std::cout << std::endl;
+                    std::cout << "CHOICE " << i+1 << ": ";
+                    std::cout << legalmoves[i].position << " TO " << legalmoves[i].destination;
+                }
+                std::cout << std::endl;
+            }
+            while (true) {
+                std::cout << "Insert choice: ";
+                if (std::cin >> choice) {
+                    if (choice > 0 && choice <= legalmoves.size()) {
+                        std::cout << std::endl;
+                        break;
+                    } else {
+                        std::cout << std::endl;
+                        std::cout << "Invalid choice. ";
+                    }
+                } else {
+                    std::cout << std::endl;
+                    std::cin.clear();
+                    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                    std::cout << "Invalid input. Please enter an integer." << std::endl;
+                }
+            }
+            int start = 0;
+            int counter = 0;
+            while (counter < choice) {
+                if (legalmoves[start].jumpnumber == 0) {
+                    counter++;
+                }
+                start++;
+            }
+            chosenmove.push_back(legalmoves[start]);
+            start++;
+            while (legalmoves[start].jumpnumber != 0) {
+                chosenmove.push_back(legalmoves[start]);
+                start++;
+            }
+            checkBoard.applyChoice(chosenmove, checkBoard);
+            checkBoard.showBoard(checkBoard);
+            checkBoard.playerTurn = false;
         } else { // player 2 turn which is computer
+            std::clock_t startTime = std::clock();
+            std::cout << "Computer turn: " << std::endl;
+            std::vector<move> computermove = checkBoard.alphabeta(checkBoard);
+            std::clock_t endTime = std::clock();
+            double totalcomputertime = startTime - endTime;
+            std::cout << "Clock time: " << totalcomputertime << std::endl;
 
+            checkBoard.applyChoice(computermove, checkBoard);
+            checkBoard.showBoard(checkBoard);
+            checkBoard.playerTurn = true;
         }
     }
 }
