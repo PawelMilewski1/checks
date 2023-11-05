@@ -39,6 +39,3 @@ The AI portion features iterative deepening which makes use of an alphabetasearc
 
 Eval Function:
 The evaluation function is simply finding the difference between the sum of the number of the men and kings between the two players. The number of kings is multiplied by a factor of 5/3 to account for the kings extra diagonals.
-
-Future Improvements:
-Unfortunately, the program does not check for ties (repetition, each player having one piece). 
