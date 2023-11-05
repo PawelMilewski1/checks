@@ -64,13 +64,15 @@ std::vector<move> board::alphabeta(board& inputBoard, int alpha, int beta, int c
         return checkforonemove[0];
     }
 
-    std::pair<int,std::vector<move>> valuemove = maxValue(alphabetaboard, true, -INT_MAX, INT_MAX, currentDepth, transpositionTable);
+    std::pair<int,std::vector<move>> valuemove = maxValue(alphabetaboard, alphabetaboard.playerTurn, -INT_MAX, INT_MAX, currentDepth, transpositionTable);
 
     return valuemove.second;
 }
         
 std::pair<int,std::vector<move>> board::maxValue(board& inputBoard, bool playerTurn, int alpha, int beta, int currentDepth, std::unordered_map<std::string, std::pair<int, std::vector<move>>>& transpositionTable) {
-    inputBoard.playerTurn = false; //max value is always going to be player 2 (computer)
+    if (!inputBoard.computergame) {
+        inputBoard.playerTurn = false; //max value is always going to be player 2 (computer)
+    }
 
     std::string boardHash = generateHash(inputBoard);
 
@@ -108,7 +110,9 @@ std::pair<int,std::vector<move>> board::maxValue(board& inputBoard, bool playerT
 }
         
 std::pair<int,std::vector<move>> board::minValue(board& inputBoard, bool playerTurn, int alpha, int beta, int currentDepth, std::unordered_map<std::string, std::pair<int, std::vector<move>>>& transpositionTable) {
-    inputBoard.playerTurn = true; //min value is always going to be player 1 (user)
+    if (!inputBoard.computergame) {
+        inputBoard.playerTurn = true; //min value is always going to be player 1 (user)
+    }
     
     std::string boardHash = generateHash(inputBoard);
 
@@ -470,22 +474,28 @@ void board::showBoard(board& inputBoard) {
     std::cout << std::endl << "+----+----+----+----+----+----+----+----+" << std::endl;
 
     for (int i = 0; i < sizeof(inputBoard.boardArray) / sizeof(inputBoard.boardArray[0]); i++) {
-    std::string piece;
+        std::string piece;
+        std::string color;
 
-    switch (inputBoard.boardArray[i]) {
+        switch (inputBoard.boardArray[i]) {
             case 0: // Empty
+                color = "";
                 piece = "  ";
                 break;
             case 1: // Black Pawn
+                color = "\033[34m";
                 piece = "B ";
                 break;
             case 2: // Red Pawn
+                color = "\033[31m";
                 piece = "R ";
                 break;
             case 3: // Black King
+                color = "\033[34m";
                 piece = "BK";
                 break;
             case 4: // Red King
+                color = "\033[31m";
                 piece = "RK";
                 break;
             default: // Error
@@ -498,13 +508,13 @@ void board::showBoard(board& inputBoard) {
         bool lastCell = (i + 1) % 4 == 0;
 
         if (skipFirst) {
-            std::cout << "|    |" << " " + piece + " ";
+            std::cout << "|    |" << " " << color << piece << "\033[0m" << + " ";
         } else {
-            std::cout << "| " + piece + " |" << "    ";
+            std::cout << "| " << color << piece << "\033[0m" << " |" << "    ";
         }
 
         if (lastCell) {
-        std::cout << "|";
+            std::cout << "|";
             std::cout << std::endl << "+----+----+----+----+----+----+----+----+" << std::endl;
         }
     }
@@ -535,7 +545,7 @@ void board::loadGame(board& inputBoard) {
         }
 
         std::getline(inputFile,line);
-        inputBoard.time = line[0] - '0';
+        inputBoard.time = std::stoi(line);
 
         inputFile.close();
     } else {

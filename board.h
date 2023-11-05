@@ -38,6 +38,8 @@ class board {
         std::vector<move> iterativeDeepening(board& inputBoard);
         std::string generateHash(const board& inputBoard); //generate string to store values in transposition table
 
+        bool computergame = false;
+
 };
 
 #endif // BOARD_H
