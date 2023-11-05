@@ -7,7 +7,7 @@ Write-up describing your program's implementation, features, and whatever else y
 Compiling:
 1. Copy/move all files to one folder (main.cpp, board.cpp, move.h, board.h, CMakeLists.txt)
 2. I created a build folder within the main folder to keep files organized.
-3. Within the build folder, type "cmake .." to run the cmake file in the main folder
+3. In the terminal and within the build folder, type "cmake .." to run the cmake file in the main folder
 4. Then, in the build folder tpye "make" and then run the program with ./CheckersGame
 
 Program Inputs:
