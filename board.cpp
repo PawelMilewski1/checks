@@ -1,3 +1,8 @@
+/*
+Pawel Milewski - Fall 2023
+Definitions for functions for class "board"
+*/
+
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -7,7 +12,7 @@
 #include <unordered_map>
 #include "board.h"
 #include "move.h"
-
+//diagonals and double diagonals used for checking moves
 int boardDiagonals[32][4] = {{-1,-1,4,5},{-1,-1,5,6},{-1,-1,6,7},{-1,-1,7,-1},{-1,0,-1,8},{0,1,8,9},{1,2,9,10},{2,3,10,11},{4,5,12,13},{5,6,13,14},{6,7,14,15},{7,-1,15,-1},{-1,8,-1,16},{8,9,16,17},{9,10,17,18},{10,11,18,19},{12,13,20,21},{13,14,21,22},{14,15,22,23},{15,-1,23,-1},{-1,16,-1,24},{16,17,24,25},{17,18,25,26},{18,19,26,27},{20,21,28,29},{21,22,29,30},{22,23,30,31},{23,-1,31,-1},{-1,24,-1,-1},{24,25,-1,-1},{25,26,-1,-1},{26,27,-1,-1}};
 int boardtwoDiagonals[32][4] = {{-1,-1,-1,9},{-1,-1,8,10},{-1,-1,9,11},{-1,-1,10,-1},{-1,-1,-1,13},{-1,-1,12,14},{-1,-1,13,15},{-1,-1,14,-1},{-1,1,-1,17},{0,2,16,18},{1,3,17,19},{2,-1,18,-1},{-1,5,-1,21},{4,6,20,22},{5,7,21,23},{6,-1,22,-1},{-1,9,-1,25},{8,10,24,26},{9,11,25,27},{10,-1,26,-1},{-1,13,-1,29},{12,14,28,30},{13,15,29,31},{14,-1,30,-1},{-1,17,-1,-1},{16,18,-1,-1},{17,19,-1,-1},{18,-1,-1,-1},{-1,21,-1,-1},{20,22,-1,-1},{21,23,-1,-1},{22,-1,-1,-1}};
 
@@ -17,17 +22,18 @@ board::board() {
 std::vector<move> board::iterativeDeepening(board& inputBoard) {
     std::vector<move> bestMove;
     std::unordered_map<std::string, std::pair<int, std::vector<move>>> transpositionTable;
-
+    // depth iterates by +2 so that maxvalue is called last instead of minvalue (otherwise best move for player 1 was returned) so then time/4 is used instead of time/2
     for (int depth = 2; depth <= inputBoard.maxDepth && (static_cast<double>(std::clock() - inputBoard.timestart) / CLOCKS_PER_SEC < inputBoard.time / 4); depth+=2) {
         inputBoard.currentdepth = depth;
-        std::cout << "DEPTH: " << inputBoard.currentdepth << std::endl;
-        std::cout << static_cast<double>(std::clock() - inputBoard.timestart) / CLOCKS_PER_SEC << std::endl;
+        //std::cout << "DEPTH REACHED: " << inputBoard.currentdepth << std::endl;
+        //std::cout << static_cast<double>(std::clock() - inputBoard.timestart) / CLOCKS_PER_SEC << std::endl;
         bestMove = alphabeta(inputBoard, -INT_MAX, INT_MAX, 0, transpositionTable);
     }
+    std::cout << "DEPTH REACHED: " << inputBoard.currentdepth << std::endl;
     return bestMove;
 }
 
-std::string board::generateHash(const board& inputBoard) {    
+std::string board::generateHash(const board& inputBoard) { // create unique string key to input into data into transpositiontable
     std::string hash;
 
     for (int i = 0; i < 32; i++) {
@@ -64,11 +70,11 @@ std::vector<move> board::alphabeta(board& inputBoard, int alpha, int beta, int c
 }
         
 std::pair<int,std::vector<move>> board::maxValue(board& inputBoard, bool playerTurn, int alpha, int beta, int currentDepth, std::unordered_map<std::string, std::pair<int, std::vector<move>>>& transpositionTable) {
-    inputBoard.playerTurn = false;
+    inputBoard.playerTurn = false; //max value is always going to be player 2 (computer)
 
     std::string boardHash = generateHash(inputBoard);
 
-    if (transpositionTable.find(boardHash) != transpositionTable.end() && transpositionTable[boardHash].first >= beta) {
+    if (transpositionTable.find(boardHash) != transpositionTable.end() && transpositionTable[boardHash].first >= beta) { //check if board state was evaluated before (from table)
         return transpositionTable[boardHash];
     }
 
@@ -77,7 +83,7 @@ std::pair<int,std::vector<move>> board::maxValue(board& inputBoard, bool playerT
     if (gameisTerminal != 0) { // THEN GAME IS TERMINAL
         return std::make_pair(gameisTerminal, moves); // return utility and null
     }
-    if (currentDepth == inputBoard.currentdepth) {
+    if (currentDepth == inputBoard.currentdepth) { // if depth limit is reached
         return std::make_pair(inputBoard.eval(inputBoard) + 1, moves);
     }
     int v = INT_MIN;
@@ -85,7 +91,7 @@ std::pair<int,std::vector<move>> board::maxValue(board& inputBoard, bool playerT
     for (int i = 0; i < legalmoves.size(); i++) {
         board searchboard = inputBoard;
 
-        searchboard.applyChoice(legalmoves[i], searchboard);
+        searchboard.applyChoice(legalmoves[i], searchboard); // do move and then pass it to minValue for player 1 (user) turn
         std::pair<int,std::vector<move>> minvaluemove = minValue(searchboard, playerTurn, alpha, beta, currentDepth+1, transpositionTable);
         if (minvaluemove.first > v) {
             v = minvaluemove.first;
@@ -93,20 +99,20 @@ std::pair<int,std::vector<move>> board::maxValue(board& inputBoard, bool playerT
             alpha = std::max(alpha,v);
         }
         if (v >= beta) {
-            transpositionTable[boardHash] = std::make_pair(v, moves);
+            transpositionTable[boardHash] = std::make_pair(v, moves); //save evaluation and moveset to table
             return std::make_pair(v, moves);
         }
     }
-    transpositionTable[boardHash] = std::make_pair(v, moves);
+    transpositionTable[boardHash] = std::make_pair(v, moves); //save evaluation and moveset to table
     return std::make_pair(v,moves);
 }
         
 std::pair<int,std::vector<move>> board::minValue(board& inputBoard, bool playerTurn, int alpha, int beta, int currentDepth, std::unordered_map<std::string, std::pair<int, std::vector<move>>>& transpositionTable) {
-    inputBoard.playerTurn = true;
+    inputBoard.playerTurn = true; //min value is always going to be player 1 (user)
     
     std::string boardHash = generateHash(inputBoard);
 
-    if (transpositionTable.find(boardHash) != transpositionTable.end() && transpositionTable[boardHash].first <= alpha) {
+    if (transpositionTable.find(boardHash) != transpositionTable.end() && transpositionTable[boardHash].first <= alpha) { //check if board state was evaluated before (from table)
         return transpositionTable[boardHash];
     }
 
@@ -115,7 +121,7 @@ std::pair<int,std::vector<move>> board::minValue(board& inputBoard, bool playerT
     if (gameisTerminal != 0) { // THEN GAME IS TERMINAL
         return std::make_pair(gameisTerminal, moves); // return utility and null
     }
-    if (currentDepth == inputBoard.currentdepth) {
+    if (currentDepth == inputBoard.currentdepth) { //if depth limit is reached
         return std::make_pair(-inputBoard.eval(inputBoard) - 1, moves);
     }
     int v = INT_MAX;
@@ -123,7 +129,7 @@ std::pair<int,std::vector<move>> board::minValue(board& inputBoard, bool playerT
     for (int i = 0; i < legalmoves.size(); i++) {
         board searchboard = inputBoard;
 
-        searchboard.applyChoice(legalmoves[i], searchboard);
+        searchboard.applyChoice(legalmoves[i], searchboard); // do move and then pass it to maxValue for player 2 (computer) turn
         std::pair<int,std::vector<move>> maxvaluemove = maxValue(searchboard, playerTurn, alpha, beta, currentDepth+1, transpositionTable);
         if (maxvaluemove.first < v) {
             v = maxvaluemove.first;
@@ -131,11 +137,11 @@ std::pair<int,std::vector<move>> board::minValue(board& inputBoard, bool playerT
             beta = std::min(beta,v);
         }
         if (v <= alpha) {
-            transpositionTable[boardHash] = std::make_pair(v, moves);
+            transpositionTable[boardHash] = std::make_pair(v, moves); //save evaluation and moveset to table
             return std::make_pair(v, legalmoves[i]);
         }
     }
-    transpositionTable[boardHash] = std::make_pair(v, moves);
+    transpositionTable[boardHash] = std::make_pair(v, moves); //save evaluation and moveset to table
     return std::make_pair(v,moves);
 }
 
@@ -157,13 +163,13 @@ int board::eval(board& inputBoard) {
             kingCount++;
         }
     }
-    eval = manCount + kingCount * 5/3;
+    eval = manCount + kingCount * 5/3; //evaluation function counting the number of men and kings (difference between the two players)
     return eval;
 }
 
 int board::gameisTerminal(board& inputBoard) {
     board termgame = inputBoard;
-    if (termgame.playerTurn) {
+    if (termgame.playerTurn) { //for minvalue function
         std::vector<std::vector<move>> legalmovesPlayer1 = legalMoves(termgame);
         bool playerTurn = termgame.playerTurn;
         termgame.playerTurn = !playerTurn;
@@ -175,7 +181,7 @@ int board::gameisTerminal(board& inputBoard) {
             return -999999;
         }
         return 0; 
-    } else {
+    } else { //for max value function
         std::vector<std::vector<move>> legalmovesPlayer2 = legalMoves(termgame);
         bool playerTurn = termgame.playerTurn;
         termgame.playerTurn = !playerTurn;
@@ -196,7 +202,7 @@ std::vector<std::vector<move>> board::legalMoves(board& inputBoard) {
     std::vector<move> jumpmoves;
     std::vector<move> regmoves;
     move firstmove;
-    jumpmoves = checkJump(inputBoard, -1, 0);
+    jumpmoves = checkJump(inputBoard, -1, 0); //check for jump moves
     if (jumpmoves.empty()) { // then there are no jumps available
         regmoves = checkRegular(inputBoard);
         for (int i = 0; i < regmoves.size(); i++) {
@@ -204,11 +210,11 @@ std::vector<std::vector<move>> board::legalMoves(board& inputBoard) {
             legalmoves.emplace_back(moveset);
             moveset.clear();
         }
-        return legalmoves;
+        return legalmoves; //returns just regular moves
     }
-    if (jumpmoves.size() > 1) {
-        firstmove = jumpmoves[0];
-        moveset.emplace_back(firstmove);
+    if (jumpmoves.size() > 1) { //this series of statements is to convert the vector<move>jupmoves to the vector<vector<move>> legalmoves
+        firstmove = jumpmoves[0]; //jump moves (by jump number) are ordered. example: 0 1 2 3 1 1 0 1 2 3 4 3 4 5 (because it was found recursively)
+        moveset.emplace_back(firstmove);                                 // this converts to: 0 1 2 3 0 1 0 1 0 1 2 3 4 0 1 2 3 4 5 (so for example, 0->3) is a moveset in legalmoves in position i
         for (int i = 1; i < jumpmoves.size(); i++) {
             if (jumpmoves[i].jumpnumber == 0) {
                 legalmoves.emplace_back(moveset);
@@ -239,7 +245,7 @@ std::vector<std::vector<move>> board::legalMoves(board& inputBoard) {
             legalmoves.emplace_back(moveset);
         }
     }
-    if (jumpmoves.size() == 1) {
+    if (jumpmoves.size() == 1) { //if there's just one jump (and also one move) to be made
         firstmove = jumpmoves[0];
         moveset.emplace_back(firstmove);
         legalmoves.emplace_back(moveset);
@@ -248,10 +254,10 @@ std::vector<std::vector<move>> board::legalMoves(board& inputBoard) {
 }
 
 void board::applyChoice(std::vector<move> moveset, board& inputBoard) {
-    if (moveset[0].jumpnumber == -1) {
+    if (moveset[0].jumpnumber == -1) { //regular move
         movePiece(moveset[0], inputBoard);
     } else {
-        for (int i = 0; i < moveset.size(); i++) {
+        for (int i = 0; i < moveset.size(); i++) { //jump moves
             movePiece(moveset[i], inputBoard);
         }
     }
@@ -279,7 +285,7 @@ board board::movePiece(move& chosenMove, board& inputBoard) {
     return inputBoard;
 }
 
-std::vector<move> board::checkRegular(board& inputBoard) {
+std::vector<move> board::checkRegular(board& inputBoard) { //regular one diagonal moves
     int player = 1;
     int enemy = 2;
     bool promote = false;
@@ -332,7 +338,7 @@ std::vector<move> board::checkJump(board& inputBoard, int position, int jumpnumb
     std::vector<move> jumpmoves;
     std::vector<move> returnedjumpmoves;
     move currentmove;
-    if (position > 0) {
+    if (position > 0) { // this if statement goes off it is a consecutive move (not the first jump)
         if (jumpboard.boardArray[position] == player + 2 || (player == 1 && jumpboard.boardArray[position] == player)) {
             for (int i2 = 0; i2 < 2; i2++) {
                 if (boardtwoDiagonals[position][i2] > -1) {
@@ -389,7 +395,7 @@ std::vector<move> board::checkJump(board& inputBoard, int position, int jumpnumb
                 }
             }
         }
-    } else {
+    } else { // otherwise check for first jumps
         for (int i = 0; i < 32; i++) {
             if (jumpboard.boardArray[i] == player + 2 || (player == 1 && jumpboard.boardArray[i] == player)) {
                 for (int i2 = 0; i2 < 2; i2++) {
